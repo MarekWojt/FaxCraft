@@ -12,6 +12,7 @@ import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventory;
+import net.minecraft.item.CompassItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtHelper;
@@ -21,10 +22,14 @@ import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.text.LiteralText;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
+import net.minecraft.world.dimension.DimensionType;
 
 public class EntitySenderBlock extends Block implements BlockEntityProvider {
   public static final BooleanProperty ACTIVE = BooleanProperty.of("active");
@@ -56,9 +61,10 @@ public class EntitySenderBlock extends Block implements BlockEntityProvider {
         for (int i = 0; i < blockEntity.size(); i++) {
           if (!blockEntity.isValid(i, playerActiveItem)) continue;
 
-          blockEntity.setStack(i, playerActiveItem.copy());
-          playerActiveItem.setCount(0);
+          ItemStack currentItemStack = blockEntity.getStack(i);
 
+          blockEntity.setStack(i, playerActiveItem.copy());
+          player.setStackInHand(hand, currentItemStack);
           return ActionResult.SUCCESS;
         }
       } else {
@@ -95,17 +101,14 @@ public class EntitySenderBlock extends Block implements BlockEntityProvider {
 
       if (entity instanceof PlayerEntity) ((PlayerEntity) entity).sendMessage(new LiteralText(compassStack.getTag().asString()), false);
 
-      CompoundTag lodestonePosTag = compassStack.getSubTag("LodestonePos");
-      CompoundTag lodestoneDimensionCompTag = compassStack.getTag();
-      if (lodestonePosTag == null || lodestoneDimensionCompTag == null) return;
-      Tag lodestoneDimensionTag = lodestoneDimensionCompTag.get("LodestoneDimension");
-      if (lodestoneDimensionTag == null) return;
+      CompoundTag compassCompTag = compassStack.getTag();
+      if (compassCompTag == null) return;
 
-      // TODO Dimension Check implementieren
-      /*
-      if (entity instanceof PlayerEntity) ((PlayerEntity) entity).sendMessage(new LiteralText(world.getDimension() + "?=" + lodestoneDimensionTag.asString()), false);
-      if (world.getDimension().toString() != lodestoneDimensionTag.toString()) return; // Dimensionssprung
-      */
+      CompoundTag lodestonePosTag = compassStack.getSubTag("LodestonePos");
+      if (lodestonePosTag == null) return;
+
+      if (!world.getRegistryKey().equals(CompassItem.getLodestoneDimension(compassCompTag).get())) return; // Dimensionssprung
+
 
       BlockPos lodestonePos = NbtHelper.toBlockPos(lodestonePosTag);
 
