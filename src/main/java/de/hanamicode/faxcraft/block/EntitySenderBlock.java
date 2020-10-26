@@ -7,9 +7,15 @@ import net.minecraft.block.BlockEntityProvider;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Material;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.ItemEntity;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtHelper;
+import net.minecraft.nbt.Tag;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.text.LiteralText;
@@ -40,19 +46,73 @@ public class EntitySenderBlock extends Block implements BlockEntityProvider {
   @Override
   public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
     try {
-      EntitySenderBlockEntity blockEntity = (EntitySenderBlockEntity)world.getBlockEntity(pos);
-      if (blockEntity == null) return ActionResult.SUCCESS;
+      Inventory blockEntity = (Inventory) world.getBlockEntity(pos);
+      if (blockEntity == null) return ActionResult.PASS;
 
-      ItemStack compassStack = blockEntity.getItems().get(0);
-      if (compassStack.getTag() != null) {
-        BlockPos lodestonePos = NbtHelper.toBlockPos(compassStack.getSubTag("LodestonePos"));
-        player.sendMessage(new LiteralText(lodestonePos.toString()), false);
-        player.teleport(lodestonePos.getX() + 0.5f, lodestonePos.getY() + 1, lodestonePos.getZ() + 0.5f, true);
+      ItemStack playerActiveItem = player.getStackInHand(hand);
+      if (!playerActiveItem.isEmpty()) {
+        // Item in Hand, reinlegen
+        
+        for (int i = 0; i < blockEntity.size(); i++) {
+          if (!blockEntity.isValid(i, playerActiveItem)) continue;
+
+          blockEntity.setStack(i, playerActiveItem.copy());
+          playerActiveItem.setCount(0);
+
+          return ActionResult.SUCCESS;
+        }
+      } else {
+        // Kein Item in Hand, rausnehmen
+        if (playerActiveItem.isEmpty()) {
+          for (int i = 0; i < blockEntity.size(); i++) {
+            if (blockEntity.getStack(i).isEmpty()) continue;
+            player.setStackInHand(hand, blockEntity.getStack(i));
+            blockEntity.setStack(i, ItemStack.EMPTY);
+
+
+            return ActionResult.SUCCESS;
+          }
+        }
       }
-      return ActionResult.SUCCESS;
+
+      return ActionResult.PASS;
     } catch (Exception e) {
       player.sendMessage(new LiteralText(e.getMessage()), false);
       return ActionResult.FAIL;
+    }
+  }
+
+  @Override
+  public void onSteppedOn(World world, BlockPos pos, Entity entity) {
+    try {
+      EntitySenderBlockEntity blockEntity = (EntitySenderBlockEntity) world.getBlockEntity(pos);
+      if (blockEntity == null) return;
+
+      if (!(entity instanceof LivingEntity || entity instanceof ItemEntity)) return;
+
+      ItemStack compassStack = blockEntity.getItems().get(0);
+      if (compassStack.isEmpty() || compassStack.getTag() == null) return;
+
+      if (entity instanceof PlayerEntity) ((PlayerEntity) entity).sendMessage(new LiteralText(compassStack.getTag().asString()), false);
+
+      CompoundTag lodestonePosTag = compassStack.getSubTag("LodestonePos");
+      CompoundTag lodestoneDimensionCompTag = compassStack.getTag();
+      if (lodestonePosTag == null || lodestoneDimensionCompTag == null) return;
+      Tag lodestoneDimensionTag = lodestoneDimensionCompTag.get("LodestoneDimension");
+      if (lodestoneDimensionTag == null) return;
+
+      // TODO Dimension Check implementieren
+      /*
+      if (entity instanceof PlayerEntity) ((PlayerEntity) entity).sendMessage(new LiteralText(world.getDimension() + "?=" + lodestoneDimensionTag.asString()), false);
+      if (world.getDimension().toString() != lodestoneDimensionTag.toString()) return; // Dimensionssprung
+      */
+
+      BlockPos lodestonePos = NbtHelper.toBlockPos(lodestonePosTag);
+
+      entity.teleport(lodestonePos.getX() + 0.5f, lodestonePos.getY() + 1, lodestonePos.getZ() + 0.5f);
+
+    } catch (Exception e) {
+      if (entity instanceof PlayerEntity) ((PlayerEntity) entity).sendMessage(new LiteralText(e.getMessage()), false);
     }
   }
 }
