@@ -5,12 +5,10 @@ import de.hanamicode.faxcraft.interfaces.ImplementedInventory;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.inventory.Inventories;
-import net.minecraft.inventory.SidedInventory;
 import net.minecraft.item.CompassItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.collection.DefaultedList;
-import net.minecraft.util.math.Direction;
 
 public class EntitySenderBlockEntity extends BlockEntity implements ImplementedInventory {
   // ImplementedInventory

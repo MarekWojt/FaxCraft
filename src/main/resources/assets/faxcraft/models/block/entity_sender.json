@@ -1,6 +1,7 @@
 {
-  "parent": "block/cube_all",
+  "parent": "minecraft:block/cube_column",
   "textures": {
-    "all": "faxcraft:block/entity_sender"
+    "end": "minecraft:block/polished_andesite",
+    "side": "minecraft:block/observer_back"
   }
 }
